@@ -1,5 +1,7 @@
 # WorkPilot
 
+[![Quality Gate](https://github.com/xbzz1018/workpilot/actions/workflows/quality-gate.yml/badge.svg?branch=main)](https://github.com/xbzz1018/workpilot/actions/workflows/quality-gate.yml)
+
 WorkPilot 是一个私有部署、证据约束的个人工作成果整理 Agent。它读取 Markdown、TXT 和 CSV 工作记录，提取原子事实，校验数字/日期/单位与来源，使用独立模型做语义核验，再生成带 Fact/Evidence 引用的周报或述职草稿；用户批准后才导出最终 Markdown 和 JSON。
 
 这是从 Deep Agents 学习代码中拆出的独立业务项目。它不包含上层课程示例，也不要求上传父目录中的课程代码；本仓库只保留 WorkPilot 的 API、CLI、评测、合成工作包和测试。
@@ -8,10 +10,10 @@ WorkPilot 是一个私有部署、证据约束的个人工作成果整理 Agent�
 
 ```text
 材料导入与 Evidence ID
-  -> DeepSeek V4 Flash 成果提取
+  -> 配置的 Flash 模型成果提取
   -> 本地确定性 Fact 校验
-  -> GLM 独立语义核验
-  -> DeepSeek V4 Pro 生成 ReportClaim
+  -> 独立核验模型语义核验
+  -> 配置的 Pro 模型生成 ReportClaim
   -> 本地 Claim-Fact Gate 与 Markdown Renderer
   -> approve / edit / reject
   -> 最终报告、证据、风险、用量和 Checkpoint
@@ -21,21 +23,21 @@ WorkPilot 是一个私有部署、证据约束的个人工作成果整理 Agent�
 
 ## 模型与密钥
 
-所有模型通过 VibeAPI 的 OpenAI 兼容接口访问：
-
-```text
-https://www.vibeapi.cn/v1/chat/completions
-```
+所有模型通过 `WORKPILOT_BASE_URL` 指定的 OpenAI-compatible Provider 访问。公开仓库不包含 Provider 地址、API Key 或账号。
 
 四个 Key 按角色隔离：Main/V4 Pro、Extractor/V4 Flash、Verifier/GLM、Challenger/Kimi。真实值只能放在未提交的 `.env` 或部署 Secret 中；Key 如果曾进入公开日志、提交或截图，应立即轮换。
 
 ```powershell
 Copy-Item .env.example .env
-# 填入 Key，并用 /v1/models 确认准确模型 ID
+# 仅在本地 .env 填入 Key、Provider 地址和模型 ID
 python scripts/smoke_models.py --role all --update-env --output results/model-smoke.json
 ```
 
 Smoke 工具验证模型可见性、普通回复、Tool Calling、Pydantic 结构化输出、流式和 usage 字段，输出中只包含 Key 别名。
+
+## 贡献与安全
+
+请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [SECURITY.md](SECURITY.md)。不要在 Issue、PR、日志或截图中提交 Provider 地址、API Key、Token、密码、原始工作材料或模型输出。
 
 ## Conda 开发环境
 

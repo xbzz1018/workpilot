@@ -49,7 +49,7 @@ class Settings:
 
         workspace = Path(os.getenv("WORKPILOT_WORKSPACE", "workspace")).expanduser().resolve()
         return cls(
-            base_url=os.getenv("WORKPILOT_BASE_URL", "https://www.vibeapi.cn/v1").rstrip("/"),
+            base_url=os.getenv("WORKPILOT_BASE_URL", "https://api.example.invalid/v1").rstrip("/"),
             workspace_root=workspace,
             task_db_path=Path(os.getenv("WORKPILOT_TASK_DB", str(workspace / "workpilot.sqlite"))).expanduser().resolve(),
             retention_days=int(os.getenv("WORKPILOT_RETENTION_DAYS", "30")),

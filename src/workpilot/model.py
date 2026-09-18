@@ -1,4 +1,4 @@
-"""OpenAI-compatible role model factory for the VibeAPI gateway."""
+"""OpenAI-compatible role model factory for a locally configured Provider."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def create_model(*, allow_placeholder: bool = False) -> ChatOpenAI:
         key_alias="workpilot_main_api_key",
         timeout_seconds=float(os.getenv("WORKPILOT_MAIN_MODEL_TIMEOUT", "180")),
     )
-    return create_role_model(config, os.getenv("WORKPILOT_BASE_URL", "https://www.vibeapi.cn/v1"))
+    return create_role_model(config, os.getenv("WORKPILOT_BASE_URL", "https://api.example.invalid/v1"))
 
 
 def model_identity(model: Any) -> str:

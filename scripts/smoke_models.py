@@ -1,4 +1,4 @@
-"""Real VibeAPI capability gate. Never prints or serializes API keys."""
+"""Capability gate for a locally configured Provider. Never prints API keys."""
 
 from __future__ import annotations
 

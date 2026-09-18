@@ -9,9 +9,6 @@ import subprocess
 from pathlib import Path
 
 
-DEFAULT_ATTACHMENT = Path.home() / "Desktop" / "项目3.txt"
-
-
 def extract_keys(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8-sig")
     keys = re.findall(r"(?i)sk-[A-Za-z0-9_-]{8,}", text)
@@ -41,16 +38,16 @@ def quote(value: str) -> str:
 
 def render_env(keys: list[str], password: str, password_hash: str) -> str:
     rows = [
-        "WORKPILOT_BASE_URL=https://www.vibeapi.cn/v1",
+        "WORKPILOT_BASE_URL=",
         f"WORKPILOT_MAIN_API_KEY={quote(keys[0])}",
         f"WORKPILOT_EXTRACTOR_API_KEY={quote(keys[1])}",
         f"WORKPILOT_VERIFIER_API_KEY={quote(keys[2])}",
         f"WORKPILOT_CHALLENGER_API_KEY={quote(keys[3])}",
-        "WORKPILOT_MAIN_MODEL=deepseek-v4-pro",
-        "WORKPILOT_EXTRACTOR_MODEL=deepseek-v4-flash",
-        "WORKPILOT_VERIFIER_MODEL=glm-5.3",
-        "WORKPILOT_BASELINE_MODEL=deepseek-v4-pro",
-        "WORKPILOT_CHALLENGER_MODEL=kimi-k3",
+        "WORKPILOT_MAIN_MODEL=provider-main-model",
+        "WORKPILOT_EXTRACTOR_MODEL=provider-extractor-model",
+        "WORKPILOT_VERIFIER_MODEL=provider-verifier-model",
+        "WORKPILOT_BASELINE_MODEL=provider-baseline-model",
+        "WORKPILOT_CHALLENGER_MODEL=provider-challenger-model",
         "WORKPILOT_WORKSPACE=workspace",
         "WORKPILOT_TASK_DB=workspace/workpilot.sqlite",
         "WORKPILOT_RETENTION_DAYS=30",
@@ -66,7 +63,7 @@ def render_env(keys: list[str], password: str, password_hash: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--attachment", type=Path, default=DEFAULT_ATTACHMENT)
+    parser.add_argument("--attachment", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path(".env"))
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
