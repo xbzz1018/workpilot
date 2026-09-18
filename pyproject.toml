@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.27.0"]
+requires = ["hatchling==1.32.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -10,13 +10,13 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
 dependencies = [
-  "deepagents==0.7.11",
-  "langchain-openai==1.6.0",
+  "deepagents==0.7.14",
+  "langchain-openai==1.6.2",
   "langgraph-checkpoint-sqlite==3.1.1",
   "pydantic==2.13.5",
   "python-dotenv==1.2.3",
   "fastapi==0.141.1",
-  "uvicorn[standard]==0.52.4",
+  "uvicorn[standard]==0.53.0",
   "python-multipart==0.0.32",
 ]
 
