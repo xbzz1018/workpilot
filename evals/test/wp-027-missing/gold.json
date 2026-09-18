@@ -1,0 +1,42 @@
+{
+  "case_id": "wp-027-missing",
+  "facts": [
+    {
+      "gold_id": "gold_27_deployment",
+      "statement": "完成 Atlas-27 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_7baf13f95c9efefa",
+        "ev_89997db331e5517c"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_27_tickets",
+      "statement": "关闭 32 个已验证工单",
+      "evidence_ids": [
+        "ev_a0db8a0254d8eb8a",
+        "ev_d9234f784013ae61"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_27_latency",
+      "statement": "批处理耗时从 67 分钟降至 47 分钟",
+      "evidence_ids": [
+        "ev_c2e1a059a1ac5a7f"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [
+    "已将告警噪声降低30%"
+  ],
+  "conflicts": [],
+  "required_sections": [
+    "工作概览",
+    "核心成果",
+    "风险与待确认",
+    "下一步计划"
+  ],
+  "expected_decision": "approve"
+}

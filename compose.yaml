@@ -1,0 +1,42 @@
+services:
+  app:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      WORKPILOT_WORKSPACE: /data/workspace
+      WORKPILOT_TASK_DB: /data/workspace/workpilot.sqlite
+    volumes:
+      - workpilot-data:/data/workspace
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    image: caddy:2.10-alpine
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      WORKPILOT_DOMAIN: ${WORKPILOT_DOMAIN}
+      WORKPILOT_ADMIN_USER: ${WORKPILOT_ADMIN_USER}
+      WORKPILOT_ADMIN_HASH: ${WORKPILOT_ADMIN_HASH}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  workpilot-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,40 @@
+{
+  "case_id": "wp-005-conflict",
+  "facts": [
+    {
+      "gold_id": "gold_5_deployment",
+      "statement": "完成 Atlas-5 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_7673dbfcbd3dfce1",
+        "ev_8341fddadf8de528"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_5_tickets",
+      "statement": "关闭 10 个已验证工单",
+      "evidence_ids": [
+        "ev_5b715fa53f3e8378",
+        "ev_f05674313e1d8e80"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [],
+  "conflicts": [
+    {
+      "conflict_id": "gold_conflict_5",
+      "evidence_ids": [
+        "ev_d3bf48dc1661b227",
+        "ev_dc1831ff1103ef89"
+      ]
+    }
+  ],
+  "required_sections": [
+    "工作概览",
+    "核心成果",
+    "风险与待确认",
+    "下一步计划"
+  ],
+  "expected_decision": "approve"
+}

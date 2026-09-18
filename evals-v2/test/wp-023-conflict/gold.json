@@ -1,0 +1,40 @@
+{
+  "case_id": "wp-023-conflict",
+  "facts": [
+    {
+      "gold_id": "gold_23_deployment",
+      "statement": "完成 Atlas-23 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_3174786581f06c70",
+        "ev_6423a04818e5a39e"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_23_tickets",
+      "statement": "关闭 28 个已验证工单",
+      "evidence_ids": [
+        "ev_124a7a663ed7a9d5",
+        "ev_2c84a940ddea0f62"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [],
+  "conflicts": [
+    {
+      "conflict_id": "gold_conflict_23",
+      "evidence_ids": [
+        "ev_897d953396520a71",
+        "ev_bbb36deff89fdaef"
+      ]
+    }
+  ],
+  "required_sections": [
+    "工作概览",
+    "核心成果",
+    "风险与待确认",
+    "下一步计划"
+  ],
+  "expected_decision": "approve"
+}

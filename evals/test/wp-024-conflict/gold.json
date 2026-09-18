@@ -1,0 +1,41 @@
+{
+  "case_id": "wp-024-conflict",
+  "facts": [
+    {
+      "gold_id": "gold_24_deployment",
+      "statement": "完成 Atlas-24 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_0da021c1bfc7680b",
+        "ev_ba3ab146e447f781"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_24_tickets",
+      "statement": "关闭 29 个已验证工单",
+      "evidence_ids": [
+        "ev_1dd9689e6fc37451",
+        "ev_b6016abd12bf89f8"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [],
+  "conflicts": [
+    {
+      "conflict_id": "gold_conflict_24",
+      "evidence_ids": [
+        "ev_1564422a2dffb886",
+        "ev_b631f9d28700bd26"
+      ]
+    }
+  ],
+  "required_sections": [
+    "职责与范围",
+    "核心成果",
+    "证据与影响",
+    "成长与不足",
+    "下阶段计划"
+  ],
+  "expected_decision": "approve"
+}

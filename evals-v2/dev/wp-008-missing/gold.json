@@ -1,0 +1,43 @@
+{
+  "case_id": "wp-008-missing",
+  "facts": [
+    {
+      "gold_id": "gold_8_deployment",
+      "statement": "完成 Atlas-8 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_9db63db1997c0430",
+        "ev_dfd5c585c5e872f3"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_8_tickets",
+      "statement": "关闭 13 个已验证工单",
+      "evidence_ids": [
+        "ev_269dfbd64a3f56ef",
+        "ev_3ab0004661d5287b"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_8_latency",
+      "statement": "批处理耗时从 48 分钟降至 28 分钟",
+      "evidence_ids": [
+        "ev_ba393f99c3a1cff0"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [
+    "已将告警噪声降低30%"
+  ],
+  "conflicts": [],
+  "required_sections": [
+    "职责与范围",
+    "核心成果",
+    "证据与影响",
+    "成长与不足",
+    "下阶段计划"
+  ],
+  "expected_decision": "approve"
+}

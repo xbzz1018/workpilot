@@ -1,0 +1,6 @@
+{
+  "main": "main-v2.2",
+  "extractor": "extractor-v2",
+  "verifier": "verifier-v2",
+  "baseline": "baseline-v2"
+}

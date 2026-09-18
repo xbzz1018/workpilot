@@ -1,0 +1,41 @@
+{
+  "case_id": "wp-012-regular",
+  "facts": [
+    {
+      "gold_id": "gold_12_deployment",
+      "statement": "完成 Atlas-12 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_18c3c0d73c67bf2a",
+        "ev_6ff96349a2b5104b"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_12_tickets",
+      "statement": "关闭 17 个已验证工单",
+      "evidence_ids": [
+        "ev_4165c624c7a6c431",
+        "ev_5922762dff08cec9"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_12_latency",
+      "statement": "批处理耗时从 52 分钟降至 32 分钟",
+      "evidence_ids": [
+        "ev_bb60568ef6192c2a"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [],
+  "conflicts": [],
+  "required_sections": [
+    "职责与范围",
+    "核心成果",
+    "证据与影响",
+    "成长与不足",
+    "下阶段计划"
+  ],
+  "expected_decision": "approve"
+}

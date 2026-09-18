@@ -1,0 +1,49 @@
+{
+  "version": "vibeapi-unconfigured-2026-08-31",
+  "checked_at": "2026-08-31T00:00:00Z",
+  "source": "https://www.vibeapi.cn/",
+  "models": {
+    "deepseek-v4-pro": {
+      "input_cache_hit_per_million_usd": null,
+      "input_cache_miss_per_million_usd": null,
+      "output_per_million_usd": null,
+      "note": "Relay price not provided; cost must remain null."
+    },
+    "deepseek-v4-flash": {
+      "input_cache_hit_per_million_usd": null,
+      "input_cache_miss_per_million_usd": null,
+      "output_per_million_usd": null,
+      "note": "Relay price not provided; cost must remain null."
+    },
+    "glm-5.3": {
+      "input_cache_hit_per_million_usd": null,
+      "input_cache_miss_per_million_usd": null,
+      "output_per_million_usd": null,
+      "note": "Relay price not provided; cost must remain null."
+    },
+    "kimi-k3": {
+      "input_cache_hit_per_million_usd": null,
+      "input_cache_miss_per_million_usd": null,
+      "output_per_million_usd": null,
+      "note": "Relay price not provided; cost must remain null."
+    },
+    "deepseek-chat": {
+      "input_cache_hit_per_million_usd": null,
+      "input_cache_miss_per_million_usd": null,
+      "output_per_million_usd": null,
+      "note": "Legacy model name is absent from the official pricing table checked on 2026-08-30. Cost must remain null."
+    },
+    "deepseek-v4-flash:off_peak": {
+      "input_cache_hit_per_million_usd": 0.007,
+      "input_cache_miss_per_million_usd": 0.22,
+      "output_per_million_usd": 0.66,
+      "note": "Official off-peak rate; weekday peak hours are 01:00-04:00 and 06:00-10:00 UTC."
+    },
+    "deepseek-v4-flash:peak": {
+      "input_cache_hit_per_million_usd": 0.014,
+      "input_cache_miss_per_million_usd": 0.44,
+      "output_per_million_usd": 1.32,
+      "note": "Official weekday peak rate for 01:00-04:00 and 06:00-10:00 UTC."
+    }
+  }
+}

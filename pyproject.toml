@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "workpilot-agent"
+version = "0.2.0"
+description = "Evidence-grounded work summary agent built with the DeepAgents harness"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+dependencies = [
+  "deepagents==0.7.11",
+  "langchain-openai==1.6.0",
+  "langgraph-checkpoint-sqlite==3.1.1",
+  "pydantic==2.13.5",
+  "python-dotenv==1.2.3",
+  "fastapi==0.141.1",
+  "uvicorn[standard]==0.52.4",
+  "python-multipart==0.0.32",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "httpx==0.28.1",
+]
+
+[project.scripts]
+workpilot = "workpilot.cli:main"
+workpilot-api = "workpilot.api:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/workpilot"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/workpilot", "tests", "scripts", "evals", "evals-v2", "results", "openapi", "deploy", "README.md", "pyproject.toml", "requirements.lock", "environment.yml", "Dockerfile", "compose.yaml"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers --cov=workpilot --cov-report=term-missing --cov-fail-under=85"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["workpilot"]
+
+[tool.coverage.report]
+omit = ["src/workpilot/cli.py", "src/workpilot/agents.py"]
+show_missing = true

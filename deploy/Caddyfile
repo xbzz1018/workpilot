@@ -1,0 +1,7 @@
+{$WORKPILOT_DOMAIN} {
+    encode zstd gzip
+    basic_auth {
+        {$WORKPILOT_ADMIN_USER} {$WORKPILOT_ADMIN_HASH}
+    }
+    reverse_proxy app:8000
+}

@@ -1,0 +1,33 @@
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build and packaging output
+build/
+dist/
+*.egg-info/
+
+# Local runtime state and generated evaluation output
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+results/
+workspaces/
+test-results/
+playwright-report/
+
+# IDE files
+.idea/
+.vscode/

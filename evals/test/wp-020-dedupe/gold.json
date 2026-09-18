@@ -1,0 +1,43 @@
+{
+  "case_id": "wp-020-dedupe",
+  "facts": [
+    {
+      "gold_id": "gold_20_deployment",
+      "statement": "完成 Atlas-20 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_162fd88b6d64d466",
+        "ev_2593e8a14e4671ac",
+        "ev_c0433dcc97e5cc75",
+        "ev_d022e52d15fbea83"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_20_tickets",
+      "statement": "关闭 25 个已验证工单",
+      "evidence_ids": [
+        "ev_73569e85a4684cb8",
+        "ev_7d8f6021deae2915"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_20_latency",
+      "statement": "批处理耗时从 60 分钟降至 40 分钟",
+      "evidence_ids": [
+        "ev_6431d492dc848546"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [],
+  "conflicts": [],
+  "required_sections": [
+    "职责与范围",
+    "核心成果",
+    "证据与影响",
+    "成长与不足",
+    "下阶段计划"
+  ],
+  "expected_decision": "approve"
+}

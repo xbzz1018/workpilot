@@ -1,0 +1,42 @@
+{
+  "case_id": "wp-019-dedupe",
+  "facts": [
+    {
+      "gold_id": "gold_19_deployment",
+      "statement": "完成 Atlas-19 发布检查并按计划上线",
+      "evidence_ids": [
+        "ev_8c4684c10e640e47",
+        "ev_99458fa2b2c2cdc4",
+        "ev_db29d744255b59ca",
+        "ev_dbaaad863ac0be81"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_19_tickets",
+      "statement": "关闭 24 个已验证工单",
+      "evidence_ids": [
+        "ev_1238246fee3d36fa",
+        "ev_848f8fc7a9f0799f"
+      ],
+      "required": true
+    },
+    {
+      "gold_id": "gold_19_latency",
+      "statement": "批处理耗时从 59 分钟降至 39 分钟",
+      "evidence_ids": [
+        "ev_1ae149ee7ad0402c"
+      ],
+      "required": true
+    }
+  ],
+  "forbidden_claims": [],
+  "conflicts": [],
+  "required_sections": [
+    "工作概览",
+    "核心成果",
+    "风险与待确认",
+    "下一步计划"
+  ],
+  "expected_decision": "approve"
+}
