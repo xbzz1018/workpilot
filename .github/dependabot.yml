@@ -11,6 +11,10 @@ updates:
     assignees:
       - xbzz1018
     groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
       python-minor-patch:
         update-types:
           - minor
