@@ -1,0 +1,4 @@
+# Evaluation fixtures are hashed as frozen byte sequences. Keep their line
+# endings stable on Windows and Linux so the manifests remain portable.
+/evals/** text eol=crlf
+/evals-v2/** text eol=crlf
