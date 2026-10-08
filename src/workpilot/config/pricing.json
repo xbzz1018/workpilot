@@ -1,7 +1,7 @@
 {
-  "version": "unconfigured-local",
+  "version": "vibeapi-unconfigured-2026-08-31",
   "checked_at": "2026-08-31T00:00:00Z",
-  "source": "local-provider-config",
+  "source": "https://www.vibeapi.cn/",
   "models": {
     "deepseek-v4-pro": {
       "input_cache_hit_per_million_usd": null,
