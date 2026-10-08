@@ -4,6 +4,15 @@ WorkPilot 是一个私有部署、证据约束的个人工作成果整理 Agent�
 
 这是从 Deep Agents 学习代码中拆出的独立业务项目。它不包含上层课程示例，也不要求上传父目录中的课程代码；本仓库只保留 WorkPilot 的 API、CLI、评测、合成工作包和测试。
 
+## 阅读路径
+
+| 想核对什么 | 从这里开始 |
+| --- | --- |
+| API 输入和输出 | [OpenAPI 快照](openapi/openapi.json) |
+| 合成评测样本与划分 | [v2 评测说明](evals-v2/README.md)和[测试清单](evals-v2/test-manifest.json) |
+| 离线测试 | [测试目录](tests/)；运行 `python -m pytest` |
+| 私有部署配置 | [Compose 文件](compose.yaml)和下文“本地私有运行” |
+
 ## 核心流程
 
 ```text
@@ -87,9 +96,11 @@ workpilot eval --split test --system test_matrix --run-id test-v2-frozen --max-m
 docker compose up --build -d
 ```
 
-Compose 只包含 WorkPilot App 与 Caddy。App 端口不直接暴露，Caddy 负责单管理员 Basic Auth；SQLite、上传材料、产物和 Checkpoint 存在 Docker volume 中。当前本机入口为 `http://localhost`，用户名和随机密码只保存在 Git 忽略的 `.env`。Caddyfile 仍可在后续配置真实域名时启用自动 HTTPS。
+Compose 只包含 WorkPilot App 与 Caddy。App 端口不直接暴露，Caddy 负责单管理员 Basic Auth；SQLite、上传材料、产物和 Checkpoint 存在 Docker volume 中。启动后本机入口为 `http://localhost`，用户名和随机密码只保存在 Git 忽略的 `.env`。Caddyfile 仍可在后续配置真实域名时启用自动 HTTPS。
 
-## 当前验证状态
+## 已记录的验证状态
+
+仓库内可以复核 `tests/`、`evals-v2/` 和 OpenAPI 快照。真实模型 smoke、Dev 和未完成的 Test 运行记录保存在未提交的 `results/`，下列本机结果不能当作公开可独立复算的模型质量成绩。
 
 - Conda Python 3.12 环境已建立。
 - 四角色真实 smoke 全部通过：普通回复、Tool Calling、Pydantic 结构化输出、流式、usage 和错误格式均可用。
