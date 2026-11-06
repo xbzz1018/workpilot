@@ -72,6 +72,10 @@ FastAPI OpenAPI 3.1 快照位于 `openapi/openapi.json`。主要接口：
 
 单机最多 3 个活跃任务，SQLite WAL 保存任务和事件；LangGraph SQLite 保存 Agent Checkpoint。终态任务默认保留 30 天并每日清理。CLI 与 API 复用同一领域、Pipeline 和工作区实现。
 
+上传限制为单文件 1 MiB、总计 10 MiB，超过限制返回 `413`；应用读取上传文件时也限制缓冲大小，部署层仍需配置请求体大小限制。文件名只接受跨平台的文件基名，报告周期去除首尾空白后不能为空。CSV 每行须与表头列数一致，允许显式空单元格。
+
+材料导入未完成时 `/materials` 返回 `409 materials_not_ready`。SSE 支持 `Last-Event-ID` 断点续读；该值为非负事件序号，省略时从头读取。服务重启自动恢复被中断的任务，已失败任务保留错误并等待显式 `/retry`；排队期间取消的任务不进入材料导入和模型阶段。
+
 ## 评测
 
 - `evals/`：保留原始 v1 数据集。
@@ -107,7 +111,7 @@ Compose 只包含 WorkPilot App 与 Caddy。App 端口不直接暴露，Caddy �
 - 完整 Dev 四组真实结果位于 `results/dev-v2-initial/`；初始完成率为 Baseline 0%、同模型 WorkPilot 20%、异构 WorkPilot 70%、Challenger 0%。
 - 三个异构 Dev 失败案例只在 Dev 上完成定向修复与复测，最终配置记录在 `results/frozen-config.json`。
 - 冻结 Test 在中转站 502 恢复过程中由用户为控制 Token 成本主动停止，当前为 47/60 个系统结果；`results/test-v2-frozen/` 明确标记 `user_stopped`，不能作为最终 Test 或简历数字。
-- 55 项离线测试通过，覆盖率 88.76%。
+- 历史基线为 55 项离线测试、覆盖率 88.76%；当前测试与覆盖率以对应提交的 Quality Gate 为准。测试包含上传边界、SSE 续读、取消与恢复状态的回归。
 - OpenAPI 3.1 快照已生成。
 - v1/v2 Test manifest 均锁定 100 个文件。
 - 本地 Compose 已验证未认证 401、认证后 health/OpenAPI 200，以及 App 重启后的 SQLite 卷持久化。

@@ -7,9 +7,9 @@ import threading
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
-from workpilot.ingestion import MAX_PACKAGE_BYTES, SUPPORTED_TYPES, import_package
+from workpilot.ingestion import MAX_FILE_BYTES, MAX_PACKAGE_BYTES, SUPPORTED_TYPES, import_package
 from workpilot.pipeline import PipelineCancelled, approve_pipeline, run_pipeline
 from workpilot.schemas import ImportedPackage, ReportType, RunStatus, TaskRecord, TaskSpec, WorkflowStage
 from workpilot.settings import Settings
@@ -32,6 +32,9 @@ class ApplicationService:
         if sum(len(content) for _, content in files) > MAX_PACKAGE_BYTES:
             raise ValueError("work package exceeds 10 MiB limit")
         task_id = uuid.uuid4().hex[:16]
+        task = TaskSpec(task_id=task_id, report_type=report_type, period=period)
+        if any(len(content) > MAX_FILE_BYTES for _, content in files):
+            raise ValueError("file exceeds 1 MiB limit")
         workspace = TaskWorkspace(self.settings.workspace_root, task_id)
         incoming = workspace.path / "incoming"
         incoming.mkdir(parents=True, exist_ok=False)
@@ -39,7 +42,10 @@ class ApplicationService:
         try:
             for name, content in files:
                 safe_name = Path(name).name
-                if safe_name != name or Path(safe_name).suffix.lower() not in SUPPORTED_TYPES:
+                if (
+                    safe_name != name or PureWindowsPath(name).name != name
+                    or Path(safe_name).suffix.lower() not in SUPPORTED_TYPES
+                ):
                     raise ValueError(f"unsafe or unsupported filename: {name}")
                 if safe_name.casefold() in seen:
                     raise ValueError(f"duplicate filename: {safe_name}")
@@ -48,7 +54,7 @@ class ApplicationService:
         except Exception:
             shutil.rmtree(workspace.path, ignore_errors=True)
             raise
-        record = self.store.create(task_id, report_type, period)
+        record = self.store.create(task_id, task.report_type, task.period)
         self._schedule(task_id)
         return record
 
@@ -64,6 +70,8 @@ class ApplicationService:
             return
         workspace = TaskWorkspace(self.settings.workspace_root, task_id)
         try:
+            if self.store.is_cancelled(task_id):
+                raise PipelineCancelled("task cancellation requested")
             task = TaskSpec(task_id=task_id, report_type=record.report_type, period=record.period)
             if not workspace.exists("task.json"):
                 self.store.update(task_id, status=RunStatus.INGESTING, stage=WorkflowStage.INGESTING)
@@ -133,7 +141,7 @@ class ApplicationService:
         return record
 
     def recover_incomplete(self) -> None:
-        terminal = {RunStatus.COMPLETED, RunStatus.REJECTED, RunStatus.CANCELLED, RunStatus.WAITING_APPROVAL}
+        terminal = {RunStatus.COMPLETED, RunStatus.REJECTED, RunStatus.CANCELLED, RunStatus.FAILED, RunStatus.WAITING_APPROVAL}
         for record in self.store.list(1000):
             if record.status not in terminal:
                 self.store.update(record.task_id, status=RunStatus.RECOVERING, stage=WorkflowStage.RECOVERING)

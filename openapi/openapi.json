@@ -75,6 +75,9 @@
               }
             }
           },
+          "413": {
+            "description": "File exceeds 1 MiB or package exceeds 10 MiB"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -182,6 +185,17 @@
               "type": "string",
               "title": "Task Id"
             }
+          },
+          {
+            "name": "last-event-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Last-Event-Id"
+            }
           }
         ],
         "responses": {
@@ -231,6 +245,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Material import has not completed"
           },
           "422": {
             "description": "Validation Error",

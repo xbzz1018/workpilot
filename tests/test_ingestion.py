@@ -66,3 +66,15 @@ def test_rejects_duplicate_headers_and_long_record(tmp_path: Path) -> None:
     (tmp_path / "long.txt").write_text("x" * 8001, encoding="utf-8")
     with pytest.raises(IngestionError, match="8000"):
         import_package(tmp_path)
+
+
+def test_rejects_csv_rows_with_missing_columns(tmp_path: Path) -> None:
+    (tmp_path / "short.csv").write_text("task,owner\nrelease\n", encoding="utf-8")
+    with pytest.raises(IngestionError, match="fewer values"):
+        import_package(tmp_path)
+
+
+def test_accepts_explicitly_empty_csv_cells(tmp_path: Path) -> None:
+    (tmp_path / "empty-cell.csv").write_text("task,owner\nrelease,\n", encoding="utf-8")
+    package = import_package(tmp_path)
+    assert "task=release | owner=" in package.evidence[0].excerpt
