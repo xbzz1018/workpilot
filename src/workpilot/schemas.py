@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StrictModel(BaseModel):
@@ -37,6 +37,11 @@ class TaskSpec(StrictModel):
     report_type: ReportType
     period: str = Field(min_length=1, max_length=120)
     title: str = Field(default="WorkPilot report", min_length=1, max_length=200)
+
+    @field_validator("period", mode="before")
+    @classmethod
+    def strip_period(cls, value: Any) -> Any:
+        return value.strip() if isinstance(value, str) else value
 
 
 class Material(StrictModel):

@@ -9,11 +9,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 from workpilot import __version__
+from workpilot.ingestion import MAX_FILE_BYTES, MAX_PACKAGE_BYTES
 from workpilot.schemas import ImportedPackage, ReportBundle, ReportType, RunStatus, TaskRecord, VerificationResult
 from workpilot.service import ApplicationService
 from workpilot.settings import Settings
@@ -91,7 +92,10 @@ def create_app(settings: Settings | None = None, service: ApplicationService | N
             "challenger": settings.challenger.model,
         }
 
-    @app.post("/api/v1/tasks", response_model=TaskRecord, status_code=status.HTTP_202_ACCEPTED)
+    @app.post(
+        "/api/v1/tasks", response_model=TaskRecord, status_code=status.HTTP_202_ACCEPTED,
+        responses={413: {"description": "File exceeds 1 MiB or package exceeds 10 MiB"}},
+    )
     async def create_task(
         request: Request,
         report_type: Annotated[ReportType, Form()],
@@ -99,8 +103,21 @@ def create_app(settings: Settings | None = None, service: ApplicationService | N
         files: Annotated[list[UploadFile], File()],
     ) -> TaskRecord:
         payload: list[tuple[str, bytes]] = []
-        for upload in files:
-            payload.append((upload.filename or "", await upload.read()))
+        total_size = 0
+        try:
+            for upload in files:
+                # Multipart parsing may spool files to disk. Bound the bytes
+                # materialized by this endpoint as well, including one sentinel.
+                content = await upload.read(min(MAX_FILE_BYTES, MAX_PACKAGE_BYTES - total_size) + 1)
+                if len(content) > MAX_FILE_BYTES:
+                    raise HTTPException(status_code=413, detail={"code": "file_too_large", "message": "file exceeds 1 MiB limit"})
+                total_size += len(content)
+                if total_size > MAX_PACKAGE_BYTES:
+                    raise HTTPException(status_code=413, detail={"code": "package_too_large", "message": "work package exceeds 10 MiB limit"})
+                payload.append((upload.filename or "", content))
+        finally:
+            for upload in files:
+                await upload.close()
         try:
             return svc(request).submit(report_type, period, payload)
         except ValueError as exc:
@@ -115,11 +132,14 @@ def create_app(settings: Settings | None = None, service: ApplicationService | N
         return require(request, task_id)
 
     @app.get("/api/v1/tasks/{task_id}/events")
-    async def task_events(request: Request, task_id: str) -> StreamingResponse:
+    async def task_events(
+        request: Request, task_id: str,
+        last_event_id: Annotated[int, Header(ge=0)] = 0,
+    ) -> StreamingResponse:
         require(request, task_id)
 
         async def stream():
-            cursor = 0
+            cursor = last_event_id
             terminal = {RunStatus.COMPLETED, RunStatus.REJECTED, RunStatus.FAILED, RunStatus.CANCELLED}
             while True:
                 for sequence, event in svc(request).store.events(task_id, cursor):
@@ -132,10 +152,15 @@ def create_app(settings: Settings | None = None, service: ApplicationService | N
 
         return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
-    @app.get("/api/v1/tasks/{task_id}/materials", response_model=ImportedPackage)
+    @app.get(
+        "/api/v1/tasks/{task_id}/materials", response_model=ImportedPackage,
+        responses={409: {"description": "Material import has not completed"}},
+    )
     def materials(request: Request, task_id: str) -> ImportedPackage:
         require(request, task_id)
         workspace = TaskWorkspace(settings.workspace_root, task_id)
+        if not workspace.exists("intermediate/materials.json"):
+            raise HTTPException(status_code=409, detail={"code": "materials_not_ready", "message": "material import has not completed"})
         return ImportedPackage.model_validate(workspace.read_json("intermediate/materials.json"))
 
     @app.get("/api/v1/tasks/{task_id}/facts", response_model=VerificationResult)

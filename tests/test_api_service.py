@@ -7,12 +7,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.datastructures import UploadFile
 
 from workpilot.api import create_app
 from workpilot.renderer import render_report
 from workpilot.schemas import Fact, ReportClaim, ReportDraft, RunStatus, VerificationResult, WorkflowStage
 from workpilot.service import ApplicationService
 from workpilot.settings import Settings
+from workpilot.ingestion import MAX_FILE_BYTES, MAX_PACKAGE_BYTES
 
 
 def settings(tmp_path, monkeypatch) -> Settings:
@@ -177,3 +179,119 @@ def test_service_concurrent_isolation_retry_cancel_and_retention(tmp_path, monke
     assert not old_dir.exists()
     assert service.store.get("old") is None
     service.shutdown()
+
+
+@pytest.mark.parametrize("name", ["../x.txt", "folder/x.txt", "folder\\x.txt"])
+def test_upload_rejects_paths_on_every_platform(api, name) -> None:
+    client, service, config = api
+    response = client.post(
+        "/api/v1/tasks", data={"report_type": "work_summary", "period": "p"},
+        files=[("files", (name, b"done", "text/plain"))],
+    )
+    assert response.status_code == 400
+    assert service.store.list() == []
+
+
+def test_upload_rejects_large_file_before_creating_task(api, monkeypatch) -> None:
+    client, service, config = api
+    original_read = UploadFile.read
+
+    async def bounded_read(upload, size=-1):
+        assert 0 < size <= MAX_FILE_BYTES + 1
+        return await original_read(upload, size)
+
+    monkeypatch.setattr(UploadFile, "read", bounded_read)
+    response = client.post(
+        "/api/v1/tasks", data={"report_type": "work_summary", "period": "p"},
+        files=[("files", ("large.txt", b"x" * (MAX_FILE_BYTES + 1), "text/plain"))],
+    )
+    assert response.status_code == 413
+    assert service.store.list() == []
+    assert list(config.workspace_root.glob("*/incoming")) == []
+
+
+def test_upload_rejects_large_package_before_creating_task(api, monkeypatch) -> None:
+    client, service, config = api
+    original_read = UploadFile.read
+    sizes = []
+
+    async def record_read(upload, size=-1):
+        sizes.append(size)
+        return await original_read(upload, size)
+
+    monkeypatch.setattr(UploadFile, "read", record_read)
+    response = client.post(
+        "/api/v1/tasks", data={"report_type": "work_summary", "period": "p"},
+        files=[("files", (f"{index}.txt", b"x" * MAX_FILE_BYTES, "text/plain"))
+               for index in range(MAX_PACKAGE_BYTES // MAX_FILE_BYTES + 1)],
+    )
+    assert response.status_code == 413
+    assert service.store.list() == []
+    assert sizes[-1] == 1
+
+
+def test_service_rejects_large_file_and_blank_period_synchronously(api) -> None:
+    client, service, config = api
+    with pytest.raises(ValueError, match="1 MiB"):
+        service.submit("work_summary", "p", [("large.txt", b"x" * (MAX_FILE_BYTES + 1))])
+    with pytest.raises(ValueError, match="period"):
+        service.submit("work_summary", "  ", [("ok.txt", b"done")])
+    assert service.store.list() == []
+
+
+def test_service_normalizes_period_and_rejects_windows_paths(api, monkeypatch) -> None:
+    client, service, config = api
+    monkeypatch.setattr(service, "_schedule", lambda task_id: None)
+    with pytest.raises(ValueError, match="filename"):
+        service.submit("work_summary", "p", [("folder\\x.txt", b"done")])
+    record = service.submit("work_summary", "  2026-W45  ", [("ok.txt", b"done")])
+    assert record.period == "2026-W45"
+
+
+def test_materials_returns_conflict_until_imported(api) -> None:
+    client, service, config = api
+    service.store.create("queued-materials", "work_summary", "p")
+    response = client.get("/api/v1/tasks/queued-materials/materials")
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "materials_not_ready"
+
+
+def test_event_stream_resumes_from_last_event_id(api) -> None:
+    client, service, config = api
+    service.store.create("event-resume", "work_summary", "p")
+    service.store.add_event("event-resume", WorkflowStage.COMPLETED, "done")
+    service.store.update("event-resume", status=RunStatus.COMPLETED)
+    events = service.store.events("event-resume")
+    response = client.get("/api/v1/tasks/event-resume/events", headers={"Last-Event-ID": str(events[0][0])})
+    assert events[0][1].event_id not in response.text
+    assert events[1][1].event_id in response.text
+    assert client.get("/api/v1/tasks/event-resume/events", headers={"Last-Event-ID": str(events[-1][0])}).text == ""
+    for cursor in ("invalid", "-1"):
+        assert client.get("/api/v1/tasks/event-resume/events", headers={"Last-Event-ID": cursor}).status_code == 422
+
+
+def test_restart_leaves_failed_tasks_for_explicit_retry(api, monkeypatch) -> None:
+    client, service, config = api
+    service.store.create("failed-once", "work_summary", "p")
+    service.store.update("failed-once", status=RunStatus.FAILED, error="model failure")
+    scheduled = []
+    monkeypatch.setattr(service, "_schedule", scheduled.append)
+    service.recover_incomplete()
+    assert scheduled == []
+    assert service.require("failed-once").status is RunStatus.FAILED
+    service.retry("failed-once")
+    assert scheduled == ["failed-once"]
+
+
+def test_queued_cancellation_skips_ingestion_and_model_calls(api, monkeypatch) -> None:
+    client, service, config = api
+    service.store.create("cancelled-in-queue", "work_summary", "p")
+    service.cancel("cancelled-in-queue")
+
+    def must_not_run(*args, **kwargs):
+        pytest.fail("cancelled task must not import materials or call models")
+
+    monkeypatch.setattr("workpilot.service.import_package", must_not_run)
+    monkeypatch.setattr("workpilot.service.run_pipeline", must_not_run)
+    service._execute("cancelled-in-queue")
+    assert service.require("cancelled-in-queue").status is RunStatus.CANCELLED

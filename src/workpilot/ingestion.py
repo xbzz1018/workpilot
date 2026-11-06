@@ -49,6 +49,8 @@ def _csv_records(text: str, path: Path) -> list[tuple[str, str]]:
         for number, row in enumerate(reader, 2):
             if None in row:
                 raise IngestionError(f"{path.name} row {number} has more values than headers")
+            if any(value is None for value in row.values()):
+                raise IngestionError(f"{path.name} row {number} has fewer values than headers")
             excerpt = " | ".join(f"{key.strip()}={str(value or '').strip()}" for key, value in row.items())
             if any(str(value or "").strip() for value in row.values()):
                 records.append((f"row:{number}", excerpt))
