@@ -65,9 +65,9 @@ def create_app(settings: Settings | None = None, service: ApplicationService | N
         title="WorkPilot API",
         version=__version__,
         summary="Evidence-grounded work summary agent",
-        openapi_version="3.1.0",
         lifespan=lifespan,
     )
+    app.openapi_version = "3.1.0"
 
     def svc(request: Request) -> ApplicationService:
         return request.app.state.service
