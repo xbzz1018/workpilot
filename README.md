@@ -58,6 +58,18 @@ workpilot-api
 
 Windows 上若 `conda run` 因 GBK 输出失败，激活环境后直接运行命令，或使用环境内 `python.exe`。
 
+CI 从 `requirements.lock` 安装依赖，并将同一锁文件作为项目和开发依赖的安装约束，再用 `pip check` 核对已安装版本；依赖声明与锁文件不一致时安装会失败。更新依赖时同步生成 Python 3.12 的跨平台锁文件，并运行完整离线测试：
+
+```powershell
+uv pip compile pyproject.toml --extra dev --python-version 3.12 --universal --output-file requirements.lock --no-header --no-annotate
+python -m pip install -r requirements.lock
+python -m pip install -e ".[dev]" -c requirements.lock
+python -m pip check
+python -m pytest
+```
+
+Dependabot 每天北京时间 09:00 检查依赖，小版本和补丁按组提交；Quality Gate 每天按同一时段计划执行离线测试、依赖一致性和 OpenAPI 检查。GitHub 定时任务可能延迟，更新仍需通过验证。
+
 ## 后端 API
 
 FastAPI OpenAPI 3.1 快照位于 `openapi/openapi.json`。主要接口：
