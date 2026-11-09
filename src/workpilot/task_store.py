@@ -100,6 +100,30 @@ class TaskStore:
             if cursor.rowcount == 0:
                 raise KeyError(task_id)
 
+    def claim_retry(self, task_id: str) -> TaskRecord:
+        """Claim a failed task once and persist its recovery event atomically."""
+        event = TaskEvent(
+            event_id=uuid.uuid4().hex, task_id=task_id, stage=WorkflowStage.RECOVERING,
+            message="Recovering from persisted stage",
+        )
+        with self._lock, self._connect() as connection:
+            cursor = connection.execute(
+                "UPDATE tasks SET status=?, stage=?, updated_at=?, error=NULL, cancel_requested=0 "
+                "WHERE task_id=? AND status=?",
+                (RunStatus.RECOVERING.value, WorkflowStage.RECOVERING.value,
+                 event.created_at.isoformat(), task_id, RunStatus.FAILED.value),
+            )
+            if cursor.rowcount == 0:
+                if connection.execute("SELECT 1 FROM tasks WHERE task_id=?", (task_id,)).fetchone() is None:
+                    raise KeyError(task_id)
+                raise ValueError("only failed tasks can be retried")
+            connection.execute(
+                "INSERT INTO events(event_id,task_id,stage,message,created_at,data) VALUES(?,?,?,?,?,?)",
+                (event.event_id, task_id, event.stage.value, event.message, event.created_at.isoformat(), "{}"),
+            )
+            row = connection.execute("SELECT * FROM tasks WHERE task_id=?", (task_id,)).fetchone()
+            return self._record(row)
+
     def clear_cancel(self, task_id: str) -> None:
         with self._lock, self._connect() as connection:
             cursor = connection.execute("UPDATE tasks SET cancel_requested=0, updated_at=? WHERE task_id=?", (_now().isoformat(), task_id))
