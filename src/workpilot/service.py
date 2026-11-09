@@ -128,9 +128,7 @@ class ApplicationService:
         record = self.require(task_id)
         if record.status is not RunStatus.FAILED:
             raise ValueError("only failed tasks can be retried")
-        self.store.clear_cancel(task_id)
-        updated = self.store.update(task_id, status=RunStatus.RECOVERING, stage=WorkflowStage.RECOVERING)
-        self.store.add_event(task_id, WorkflowStage.RECOVERING, "Recovering from persisted stage")
+        updated = self.store.claim_retry(task_id)
         self._schedule(task_id)
         return updated
 

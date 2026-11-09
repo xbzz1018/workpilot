@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -281,6 +283,51 @@ def test_restart_leaves_failed_tasks_for_explicit_retry(api, monkeypatch) -> Non
     assert service.require("failed-once").status is RunStatus.FAILED
     service.retry("failed-once")
     assert scheduled == ["failed-once"]
+
+
+def test_concurrent_retries_schedule_failed_task_once(tmp_path, monkeypatch) -> None:
+    config = settings(tmp_path, monkeypatch)
+    services = [ApplicationService(config), ApplicationService(config)]
+    store = services[0].store
+    task_id = "concurrent-retry"
+    store.create(task_id, "work_summary", "p")
+    store.update(task_id, status=RunStatus.FAILED, stage=WorkflowStage.FAILED, error="model failure")
+    store.request_cancel(task_id)
+    barrier = threading.Barrier(2)
+    scheduled = []
+
+    for service in services:
+        original_require = service.require
+
+        def read_failed(task_id, require=original_require):
+            record = require(task_id)
+            barrier.wait(timeout=10)
+            return record
+
+        monkeypatch.setattr(service, "require", read_failed)
+        monkeypatch.setattr(service, "_schedule", scheduled.append)
+
+    def retry(service):
+        try:
+            return service.retry(task_id)
+        except ValueError as exc:
+            return exc
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(retry, services))
+        assert scheduled == [task_id]
+        assert sum(isinstance(result, ValueError) for result in results) == 1
+        record = store.get(task_id)
+        assert record.status is RunStatus.RECOVERING
+        assert record.stage is WorkflowStage.RECOVERING
+        assert record.error is None
+        assert not record.cancel_requested
+        events = [event for _, event in store.events(task_id) if event.stage is WorkflowStage.RECOVERING]
+        assert len(events) == 1
+    finally:
+        for service in services:
+            service.shutdown()
 
 
 def test_queued_cancellation_skips_ingestion_and_model_calls(api, monkeypatch) -> None:
