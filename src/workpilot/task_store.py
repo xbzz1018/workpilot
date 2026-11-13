@@ -6,6 +6,7 @@ import json
 import sqlite3
 import threading
 import uuid
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -76,6 +77,22 @@ class TaskStore:
         with self._connect() as connection:
             rows = connection.execute("SELECT * FROM tasks ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
         return [self._record(row) for row in rows]
+
+    def iter_tasks(self, batch_size: int = 100) -> Iterator[TaskRecord]:
+        """Visit every task in stable key order, including during deletions."""
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive")
+        cursor = ""
+        while True:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    "SELECT * FROM tasks WHERE task_id > ? ORDER BY task_id LIMIT ?",
+                    (cursor, batch_size),
+                ).fetchall()
+            if not rows:
+                return
+            cursor = rows[-1]["task_id"]
+            yield from (self._record(row) for row in rows)
 
     def update(self, task_id: str, *, status: RunStatus | None = None, stage: WorkflowStage | None = None, error: str | None = None) -> TaskRecord:
         current = self.get(task_id)
