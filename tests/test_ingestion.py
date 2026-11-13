@@ -78,3 +78,28 @@ def test_accepts_explicitly_empty_csv_cells(tmp_path: Path) -> None:
     (tmp_path / "empty-cell.csv").write_text("task,owner\nrelease,\n", encoding="utf-8")
     package = import_package(tmp_path)
     assert "task=release | owner=" in package.evidence[0].excerpt
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_csv_evidence_locates_starting_source_lines(tmp_path: Path, newline: str) -> None:
+    text = 'task,note\nrelease,"first line\nsecond line"\n\nreview,done\n'
+    (tmp_path / "multiline.csv").write_bytes(text.replace("\n", newline).encode())
+    package = import_package(tmp_path)
+    assert [item.locator for item in package.evidence] == ["row:2", "row:5"]
+    assert "first line" in package.evidence[0].excerpt
+    assert "second line" in package.evidence[0].excerpt
+    assert "task=review" in package.evidence[1].excerpt
+
+
+def test_csv_multiline_header_preserves_source_locator(tmp_path: Path) -> None:
+    (tmp_path / "header.csv").write_text('task,"owner\nname"\nrelease,Ada\n', encoding="utf-8")
+    package = import_package(tmp_path)
+    assert package.evidence[0].locator == "row:3"
+
+
+@pytest.mark.parametrize("invalid_row, message", [("broken", "fewer"), ("broken,x,y", "more")])
+def test_csv_width_error_reports_starting_source_line(tmp_path: Path, invalid_row, message) -> None:
+    text = f'task,note\nrelease,"first\nsecond"\n\n{invalid_row}\n'
+    (tmp_path / "invalid.csv").write_text(text, encoding="utf-8")
+    with pytest.raises(IngestionError, match=f"row 5 has {message}"):
+        import_package(tmp_path)

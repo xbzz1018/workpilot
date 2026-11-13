@@ -39,20 +39,27 @@ def _text_records(text: str) -> list[tuple[str, str]]:
 
 def _csv_records(text: str, path: Path) -> list[tuple[str, str]]:
     try:
-        reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
-        if not reader.fieldnames or any(name is None or not name.strip() for name in reader.fieldnames):
+        reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+        headers = next(reader, None)
+        if not headers or any(not name.strip() for name in headers):
             raise IngestionError(f"{path.name} must have a non-empty CSV header")
-        normalized_headers = [name.strip() for name in reader.fieldnames]
+        normalized_headers = [name.strip() for name in headers]
         if len(normalized_headers) != len(set(normalized_headers)):
             raise IngestionError(f"{path.name} has duplicate CSV headers")
         records: list[tuple[str, str]] = []
-        for number, row in enumerate(reader, 2):
-            if None in row:
+        while True:
+            number = reader.line_num + 1
+            row = next(reader, None)
+            if row is None:
+                break
+            if not row:
+                continue
+            if len(row) > len(headers):
                 raise IngestionError(f"{path.name} row {number} has more values than headers")
-            if any(value is None for value in row.values()):
+            if len(row) < len(headers):
                 raise IngestionError(f"{path.name} row {number} has fewer values than headers")
-            excerpt = " | ".join(f"{key.strip()}={str(value or '').strip()}" for key, value in row.items())
-            if any(str(value or "").strip() for value in row.values()):
+            excerpt = " | ".join(f"{key}={value.strip()}" for key, value in zip(normalized_headers, row))
+            if any(value.strip() for value in row):
                 records.append((f"row:{number}", excerpt))
         return records
     except csv.Error as exc:
