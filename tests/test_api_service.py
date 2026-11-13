@@ -342,3 +342,30 @@ def test_queued_cancellation_skips_ingestion_and_model_calls(api, monkeypatch) -
     monkeypatch.setattr("workpilot.service.run_pipeline", must_not_run)
     service._execute("cancelled-in-queue")
     assert service.require("cancelled-in-queue").status is RunStatus.CANCELLED
+
+
+@pytest.mark.parametrize("operation", ["cleanup", "recovery"])
+def test_maintenance_reaches_tasks_behind_latest_thousand(api, monkeypatch, operation) -> None:
+    client, service, config = api
+    task_id = "oldest-task"
+    service.store.create(task_id, "work_summary", "p")
+    task_status = RunStatus.COMPLETED if operation == "cleanup" else RunStatus.QUEUED
+    service.store.update(task_id, status=task_status)
+    past = (datetime.now(timezone.utc) - timedelta(days=31)).isoformat()
+    recent = datetime.now(timezone.utc).isoformat()
+    with sqlite3.connect(config.task_db_path) as connection:
+        connection.execute("UPDATE tasks SET created_at=?, updated_at=? WHERE task_id=?", (past, past, task_id))
+        connection.executemany(
+            "INSERT INTO tasks VALUES (?, 'work_summary', 'p', 'waiting_approval', 'awaiting_approval', ?, ?, NULL, 0)",
+            [(f"recent-{index:04d}", recent, recent) for index in range(1001)],
+        )
+    scheduled = []
+    monkeypatch.setattr(service, "_schedule", scheduled.append)
+
+    if operation == "cleanup":
+        assert service.cleanup_expired() == [task_id]
+        assert service.store.get(task_id) is None
+    else:
+        service.recover_incomplete()
+        assert scheduled == [task_id]
+        assert service.require(task_id).status is RunStatus.RECOVERING

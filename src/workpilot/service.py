@@ -140,7 +140,7 @@ class ApplicationService:
 
     def recover_incomplete(self) -> None:
         terminal = {RunStatus.COMPLETED, RunStatus.REJECTED, RunStatus.CANCELLED, RunStatus.FAILED, RunStatus.WAITING_APPROVAL}
-        for record in self.store.list(1000):
+        for record in self.store.iter_tasks():
             if record.status not in terminal:
                 self.store.update(record.task_id, status=RunStatus.RECOVERING, stage=WorkflowStage.RECOVERING)
                 self._schedule(record.task_id)
@@ -148,7 +148,7 @@ class ApplicationService:
     def cleanup_expired(self, now: datetime | None = None) -> list[str]:
         cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=self.settings.retention_days)
         removed: list[str] = []
-        for record in self.store.list(1000):
+        for record in self.store.iter_tasks():
             if record.updated_at < cutoff and record.status in {RunStatus.COMPLETED, RunStatus.REJECTED, RunStatus.CANCELLED, RunStatus.FAILED}:
                 path = TaskWorkspace(self.settings.workspace_root, record.task_id).path
                 if path.exists():
