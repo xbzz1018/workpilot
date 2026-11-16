@@ -10,12 +10,12 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
-  "deepagents==0.7.35",
+  "deepagents==0.7.37",
   "langchain-openai==1.7.4",
   "langgraph-checkpoint-sqlite==3.1.3",
   "pydantic==2.14.3",
   "python-dotenv==1.2.4",
-  "fastapi==0.162.2",
+  "fastapi==0.162.5",
   "uvicorn[standard]==0.54.0",
   "python-multipart==0.0.33",
 ]
