@@ -1,144 +1,86 @@
 # WorkPilot
 
-WorkPilot 是一个私有部署、证据约束的个人工作成果整理 Agent。它读取 Markdown、TXT 和 CSV 工作记录，提取原子事实，校验数字/日期/单位与来源，使用独立模型做语义核验，再生成带 Fact/Evidence 引用的周报或述职草稿；用户批准后才导出最终 Markdown 和 JSON。
+把零散工作记录整理成能核对来源的周报与述职草稿。导入 Markdown、TXT 或 CSV，WorkPilot 提取成果、校验事实，再生成带引用的报告；审阅通过后导出 Markdown 和 JSON。
 
-这是从 Deep Agents 学习代码中拆出的独立业务项目。它不包含上层课程示例，也不要求上传父目录中的课程代码；本仓库只保留 WorkPilot 的 API、CLI、评测、合成工作包和测试。
+[生成第一份报告](docs/usage.md) · [API 定义](openapi/openapi.json) · [评测样本](evals-v2/README.md)
 
-## 阅读路径
+## 主要功能
 
-| 想核对什么 | 从这里开始 |
+| 功能 | 做什么 |
 | --- | --- |
-| API 输入和输出 | [OpenAPI 快照](openapi/openapi.json) |
-| 合成评测样本与划分 | [v2 评测说明](evals-v2/README.md)和[测试清单](evals-v2/test-manifest.json) |
-| 离线测试 | [测试目录](tests/)；运行 `python -m pytest` |
-| 私有部署配置 | [Compose 文件](compose.yaml)和下文“本地私有运行” |
+| 工作成果整理 | 从日志、任务清单和进度记录中提取成果，生成周报或述职草稿 |
+| 事实核对 | 校验数字、日期、单位和引用，标记记录中的冲突与风险 |
+| 草稿审阅 | 查看原始依据，批准、修改后再次校验，或拒绝本次报告 |
+| 任务恢复 | 保存阶段产物与调用记录，恢复未完成任务，支持失败后重试 |
 
-## 核心流程
+通过 FastAPI 的交互文档上传材料、查看草稿和下载报告，也可调用 API 接入自己的工具。
 
-```text
-材料导入与 Evidence ID
-  -> DeepSeek V4 Flash 成果提取
-  -> 本地确定性 Fact 校验
-  -> GLM 独立语义核验
-  -> DeepSeek V4 Pro 生成 ReportClaim
-  -> 本地 Claim-Fact Gate 与 Markdown Renderer
-  -> approve / edit / reject
-  -> 最终报告、证据、风险、用量和 Checkpoint
+## 从记录到报告
+
+```mermaid
+flowchart LR
+    A["工作记录"] --> B["提取事实与核对来源"]
+    B --> C["生成带引用的草稿"]
+    C --> D["人工审阅与导出"]
 ```
 
-阶段顺序由 Python Pipeline 强制，不依赖主 Agent 自觉调用工具。Prompt、Skill 与运行模型均保存版本/哈希；中断后优先读取已持久化阶段产物，避免重复调用已经完成的 Agent。
+成果提取、语义核验和报告写作使用独立的模型角色。数字、日期、单位与引用由本地规则检查，写作阶段消费核验后的事实。API 的阶段顺序由 Python Pipeline 固定，草稿通过检查后停在 `waiting_approval`，等待审阅。
 
-## 模型与密钥
+材料、阶段产物、模型用量和 Checkpoint 按任务保存，已完成的阶段结果可在恢复时复用。
 
-所有模型通过 VibeAPI 的 OpenAI 兼容接口访问：
+## 安装与启动
 
-```text
-https://www.vibeapi.cn/v1/chat/completions
-```
-
-四个 Key 按角色隔离：Main/V4 Pro、Extractor/V4 Flash、Verifier/GLM、Challenger/Kimi。真实值只能放在未提交的 `.env` 或部署 Secret 中；Key 如果曾进入公开日志、提交或截图，应立即轮换。
+需要 Python 3.12；以下使用 Conda。从仓库根目录执行：
 
 ```powershell
-Copy-Item .env.example .env
-# 填入 Key，并用 /v1/models 确认准确模型 ID
-python scripts/smoke_models.py --role all --update-env --output results/model-smoke.json
-```
-
-Smoke 工具验证模型可见性、普通回复、Tool Calling、Pydantic 结构化输出、流式和 usage 字段，输出中只包含 Key 别名。
-
-## Conda 开发环境
-
-```powershell
+git clone https://github.com/xbzz1018/workpilot.git
+cd workpilot
 conda env create -f environment.yml
 conda activate workpilot
-python -m pytest
-python scripts/export_openapi.py
-workpilot-api
-```
-
-Windows 上若 `conda run` 因 GBK 输出失败，激活环境后直接运行命令，或使用环境内 `python.exe`。
-
-CI 从 `requirements.lock` 安装依赖，并将同一锁文件作为项目和开发依赖的安装约束，再用 `pip check` 核对已安装版本；依赖声明与锁文件不一致时安装会失败。更新依赖时同步生成 Python 3.12 的跨平台锁文件，并运行完整离线测试：
-
-```powershell
-uv pip compile pyproject.toml --extra dev --python-version 3.12 --universal --output-file requirements.lock --no-header --no-annotate
 python -m pip install -r requirements.lock
 python -m pip install -e ".[dev]" -c requirements.lock
 python -m pip check
-python -m pytest
+Copy-Item .env.example .env
 ```
 
-Dependabot 每天北京时间 09:00 检查依赖，小版本和补丁按组提交；Quality Gate 每天按同一时段计划执行离线测试、依赖一致性和 OpenAPI 检查。GitHub 定时任务可能延迟，更新仍需通过验证。
+编辑 `.env`，配置模型服务：
 
-## 后端 API
+| 参数 | 用途 |
+| --- | --- |
+| `WORKPILOT_BASE_URL` | OpenAI 兼容服务地址，模板默认使用 VibeAPI |
+| `WORKPILOT_MAIN_MODEL` / `WORKPILOT_MAIN_API_KEY` | 报告写作，默认 DeepSeek V4 Pro |
+| `WORKPILOT_EXTRACTOR_MODEL` / `WORKPILOT_EXTRACTOR_API_KEY` | 成果提取，默认 DeepSeek V4 Flash |
+| `WORKPILOT_VERIFIER_MODEL` / `WORKPILOT_VERIFIER_API_KEY` | 语义核验，默认 GLM-5.3 |
+| `WORKPILOT_CHALLENGER_MODEL` / `WORKPILOT_CHALLENGER_API_KEY` | 开发评测，默认 Kimi K3；服务配置会读取此 Key |
+| `WORKPILOT_WORKSPACE` | 材料、草稿和报告的保存目录，默认 `workspace` |
 
-FastAPI OpenAPI 3.1 快照位于 `openapi/openapi.json`。主要接口：
+启动服务时显式加载配置文件：
 
-- `POST /api/v1/tasks`：上传材料并返回 `202`。
-- `GET /api/v1/tasks/{id}` 与 `/events`：状态和 SSE 阶段事件。
-- `GET /materials`、`/facts`、`/draft`：证据审阅。
-- `POST /decisions`：approve/edit/reject。
-- `POST /cancel`、`/retry`：取消与阶段恢复。
-- `GET /artifacts/{name}`、`/usage`、`/history`：产物和审计。
-- `POST /api/v1/evaluations`：后台评测。
+```powershell
+python -m uvicorn workpilot.api:app --env-file .env --host 127.0.0.1 --port 8000
+```
 
-单机最多 3 个活跃任务，SQLite WAL 保存任务和事件；LangGraph SQLite 保存 Agent Checkpoint。终态任务默认保留 30 天并每日清理。CLI 与 API 复用同一领域、Pipeline 和工作区实现。
+打开 <http://127.0.0.1:8000/docs>。先用[仓库自带的合成记录](evals-v2/dev/wp-001-regular/input/)创建一份 `work_summary` 任务，周期填写 `2026-W01`；查看草稿、提交审阅并下载报告的步骤见[使用指南](docs/usage.md)。提交任务会调用已配置的模型。
 
-上传限制为单文件 1 MiB、总计 10 MiB，超过限制返回 `413`；应用读取上传文件时也限制缓冲大小，部署层仍需配置请求体大小限制。文件名只接受跨平台的文件基名，报告周期去除首尾空白后不能为空。CSV 每行须与表头列数一致，允许显式空单元格。
+## 常用入口
 
-材料导入未完成时 `/materials` 返回 `409 materials_not_ready`。SSE 支持 `Last-Event-ID` 断点续读；该值为非负事件序号，省略时从头读取。服务重启自动恢复被中断的任务，已失败任务保留错误并等待显式 `/retry`；排队期间取消的任务不进入材料导入和模型阶段。
-
-恢复与过期清理按任务 ID 分批遍历，不受任务列表接口的条数限制；清理当前批次后仍会继续检查后续任务。
-
-CSV 的 `row:N` 引用和列数错误使用记录在原文件中的起始行号；引号内换行、空白行和多行表头不会使后续定位偏移。重新导入这类文件会按正确位置生成新的 Evidence ID，已保存的历史任务不回写。
+| 内容 | 入口 |
+| --- | --- |
+| 上传、任务状态、审阅与下载 | [使用指南](docs/usage.md) |
+| 阶段编排与报告生成 | [Pipeline](src/workpilot/pipeline.py)、[Renderer](src/workpilot/renderer.py) |
+| 材料定位与事实校验 | [Ingestion](src/workpilot/ingestion.py)、[Validation](src/workpilot/validation.py) |
+| 后台任务与恢复 | [ApplicationService](src/workpilot/service.py) |
+| Docker 启动 | [运行说明](docs/usage.md#docker-运行) |
 
 ## 评测
 
-- `evals/`：保留原始 v1 数据集。
-- `evals-v2/`：原子 Fact/ReportClaim 与异构模型评测快照，Dev 10、冻结 Test 20。
-- 评测组：单 Agent Baseline、同模型 WorkPilot、异构 WorkPilot；Kimi challenger 仅允许 Dev。
-
-质量指标包括事实覆盖、无依据陈述、引用有效、冲突识别和格式通过；工程指标包括分角色调用、Token、缓存、重试、P50/P95 和可空费用。缺少 usage 或中转价格时费用必须为 `null`。
-
-评测运行器使用稳定 `run_id`、逐案例原子写入、断点续跑和全局模型调用预算。Dev 配置冻结后，Test 会校验源码、Prompt、Skill、Profile、依赖和数据集哈希：
+[v2 数据集](evals-v2/README.md)包含 10 个 Dev 和 20 个 Test 合成案例，检查事实覆盖、引用有效性、冲突识别和报告格式。离线测试与模型评测分别运行：
 
 ```powershell
-workpilot eval --split dev --system dev_matrix --run-id dev-v2-initial --max-model-calls 400
-workpilot eval --split test --system test_matrix --run-id test-v2-frozen --max-model-calls 400
-# 仅恢复同一配置下未完成的案例
-workpilot eval --split test --system test_matrix --run-id test-v2-frozen --max-model-calls 400 --resume
+python -m pytest
+workpilot eval --split dev --system dev_matrix --run-id dev-first --max-model-calls 400
 ```
 
-## 本地私有运行
+模型评测调用配置的 API，结果写入 `results/`；增加 `--resume` 可继续同一运行中未完成的案例。
 
-```powershell
-# .env 中将 WORKPILOT_DOMAIN 设为 http://localhost，并配置 Basic Auth 哈希
-docker compose up --build -d
-```
-
-Compose 只包含 WorkPilot App 与 Caddy。App 端口不直接暴露，Caddy 负责单管理员 Basic Auth；SQLite、上传材料、产物和 Checkpoint 存在 Docker volume 中。启动后本机入口为 `http://localhost`，用户名和随机密码只保存在 Git 忽略的 `.env`。Caddyfile 仍可在后续配置真实域名时启用自动 HTTPS。
-
-## 已记录的验证状态
-
-仓库内可以复核 `tests/`、`evals-v2/` 和 OpenAPI 快照。真实模型 smoke、Dev 和未完成的 Test 运行记录保存在未提交的 `results/`，下列本机结果不能当作公开可独立复算的模型质量成绩。
-
-- Conda Python 3.12 环境已建立。
-- 四角色真实 smoke 全部通过：普通回复、Tool Calling、Pydantic 结构化输出、流式、usage 和错误格式均可用。
-- 完整 Dev 四组真实结果位于 `results/dev-v2-initial/`；初始完成率为 Baseline 0%、同模型 WorkPilot 20%、异构 WorkPilot 70%、Challenger 0%。
-- 三个异构 Dev 失败案例只在 Dev 上完成定向修复与复测，最终配置记录在 `results/frozen-config.json`。
-- 冻结 Test 在中转站 502 恢复过程中由用户为控制 Token 成本主动停止，当前为 47/60 个系统结果；`results/test-v2-frozen/` 明确标记 `user_stopped`，不能作为最终 Test 或简历数字。
-- 历史基线为 55 项离线测试、覆盖率 88.76%；当前测试与覆盖率以对应提交的 Quality Gate 为准。测试包含上传边界、SSE 续读、取消与恢复状态的回归。
-- OpenAPI 3.1 快照已生成。
-- v1/v2 Test manifest 均锁定 100 个文件。
-- 本地 Compose 已验证未认证 401、认证后 health/OpenAPI 200，以及 App 重启后的 SQLite 卷持久化。
-
-## 公开仓库边界
-
-- `evals/` 和 `evals-v2/` 中的数据是合成评测输入，不代表真实雇主或客户材料。
-- `results/`、`.env`、`.venv`、SQLite 数据库、上传工作区、模型 smoke 输出和覆盖率文件属于本地运行产物，不提交到 Git。
-- README 中的完成率和测试数字只描述已有运行记录；冻结 Test 被主动停止的结果不能包装成最终模型质量。
-- 该项目不提供公开注册、RAG、向量数据库、MCP、Temporal、Kafka 或多模态能力。
-
-## 范围
-
-首版不加入 RAG、向量数据库、MCP、GraphRAG、多模态、Temporal、Kafka、公开注册、前端、图片生成、图片理解或视觉校验。CLI 与 FastAPI/OpenAPI 是唯一交互入口。
+技术栈：Python、FastAPI、Deep Agents、LangGraph、Pydantic、SQLite。
