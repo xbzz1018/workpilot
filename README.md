@@ -84,3 +84,7 @@ workpilot eval --split dev --system dev_matrix --run-id dev-first --max-model-ca
 模型评测调用配置的 API，结果写入 `results/`；增加 `--resume` 可继续同一运行中未完成的案例。
 
 技术栈：Python、FastAPI、Deep Agents、LangGraph、Pydantic、SQLite。
+
+## 许可证
+
+[MIT](LICENSE)
