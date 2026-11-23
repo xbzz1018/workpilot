@@ -33,7 +33,19 @@
 
 上述后缀均接在 `/api/v1/tasks/{task_id}` 后面。材料、事实或草稿尚未就绪时，相应接口返回 `409`；稍后再查看任务状态。
 
-程序接入可通过 `/events` 订阅 SSE 阶段事件，重连时传入上次收到的非负 `Last-Event-ID`。
+程序接入可通过 `/events` 订阅 SSE 阶段事件。把 `TASK_ID` 换成上传接口返回的 ID。
+
+```powershell
+curl.exe -N http://127.0.0.1:8000/api/v1/tasks/TASK_ID/events
+```
+
+断开后，用最后收到的 `id` 从下一条事件接着读。以下示例从事件 12 之后继续读取。
+
+```powershell
+curl.exe -N -H 'Last-Event-ID: 12' http://127.0.0.1:8000/api/v1/tasks/TASK_ID/events
+```
+
+任务进入 `completed`、`rejected`、`failed` 或 `cancelled` 后，服务会发送剩余事件并关闭连接。草稿等待审阅期间，连接会保持打开。
 
 ## 3. 审阅并导出
 
