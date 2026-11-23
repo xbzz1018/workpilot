@@ -54,7 +54,7 @@
 
 ## 取消与重试
 
-`POST /api/v1/tasks/{task_id}/cancel` 请求取消任务；`POST /api/v1/tasks/{task_id}/retry` 重试已失败或已取消的任务。任务执行状态、错误和恢复阶段可继续通过任务接口查看。
+`POST /api/v1/tasks/{task_id}/cancel` 请求取消任务；`POST /api/v1/tasks/{task_id}/retry` 重试已失败的任务。材料暂存未完成时，重试会重新导入原始上传文件。任务执行状态、错误和恢复阶段可继续通过任务接口查看。
 
 ## Docker 运行
 
