@@ -73,14 +73,15 @@ class ApplicationService:
             if self.store.is_cancelled(task_id):
                 raise PipelineCancelled("task cancellation requested")
             task = TaskSpec(task_id=task_id, report_type=record.report_type, period=record.period)
-            if not workspace.exists("task.json"):
+            materials_path = "intermediate/materials.json"
+            if not (workspace.exists("task.json") and workspace.exists(materials_path)):
                 self.store.update(task_id, status=RunStatus.INGESTING, stage=WorkflowStage.INGESTING)
                 self.store.add_event(task_id, WorkflowStage.INGESTING, "Importing work materials")
                 package = import_package(workspace.path / "incoming")
-                workspace.write_task(task)
                 workspace.stage_input(workspace.path / "incoming", package)
+                workspace.write_task(task)
             else:
-                package = ImportedPackage.model_validate(workspace.read_json("intermediate/materials.json"))
+                package = ImportedPackage.model_validate(workspace.read_json(materials_path))
 
             def on_stage(stage: WorkflowStage, message: str) -> None:
                 status = RunStatus(stage.value) if stage.value in RunStatus._value2member_map_ else record.status

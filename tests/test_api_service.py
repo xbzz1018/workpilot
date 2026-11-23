@@ -13,10 +13,11 @@ from starlette.datastructures import UploadFile
 
 from workpilot.api import create_app
 from workpilot.renderer import render_report
-from workpilot.schemas import Fact, ReportClaim, ReportDraft, RunStatus, VerificationResult, WorkflowStage
+from workpilot.schemas import Fact, ReportClaim, ReportDraft, RunStatus, TaskSpec, VerificationResult, WorkflowStage
 from workpilot.service import ApplicationService
 from workpilot.settings import Settings
 from workpilot.ingestion import MAX_FILE_BYTES, MAX_PACKAGE_BYTES
+from workpilot.workspace import TaskWorkspace
 
 
 def settings(tmp_path, monkeypatch) -> Settings:
@@ -283,6 +284,36 @@ def test_restart_leaves_failed_tasks_for_explicit_retry(api, monkeypatch) -> Non
     assert service.require("failed-once").status is RunStatus.FAILED
     service.retry("failed-once")
     assert scheduled == ["failed-once"]
+
+
+def test_retry_recovers_interrupted_input_staging(api, monkeypatch) -> None:
+    client, service, config = api
+    original_stage_input = TaskWorkspace.stage_input
+
+    def interrupt_once(workspace, input_root, package):
+        monkeypatch.setattr(TaskWorkspace, "stage_input", original_stage_input)
+        raise OSError("temporary staging failure")
+
+    monkeypatch.setattr(TaskWorkspace, "stage_input", interrupt_once)
+    response = client.post(
+        "/api/v1/tasks",
+        data={"report_type": "work_summary", "period": "2026-W01"},
+        files={"files": ("weekly.txt", "Completed weekly report.")},
+    )
+    assert response.status_code == 202
+    task_id = response.json()["task_id"]
+    assert wait_for(client, task_id, "failed")["error"] == "OSError: temporary staging failure"
+    workspace = TaskWorkspace(config.workspace_root, task_id)
+    assert not workspace.exists("intermediate/materials.json")
+
+    assert not workspace.exists("task.json")
+
+    # Older versions could leave the task marker behind before staging finished.
+    record = service.require(task_id)
+    workspace.write_task(TaskSpec(task_id=task_id, report_type=record.report_type, period=record.period))
+    assert client.post(f"/api/v1/tasks/{task_id}/retry").status_code == 202
+    wait_for(client, task_id)
+    assert (workspace.input_dir / "weekly.txt").read_text() == "Completed weekly report."
 
 
 def test_concurrent_retries_schedule_failed_task_once(tmp_path, monkeypatch) -> None:
