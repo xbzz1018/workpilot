@@ -56,6 +56,23 @@
 
 `POST /api/v1/tasks/{task_id}/cancel` 请求取消任务；`POST /api/v1/tasks/{task_id}/retry` 重试已失败或已取消的任务。任务执行状态、错误和恢复阶段可继续通过任务接口查看。
 
+## 使用命令行审阅报告
+
+安装项目并配置模型后，在仓库根目录运行：
+
+```powershell
+workpilot run --input evals-v2/dev/wp-001-regular/input --type work_summary --period 2026-W01 --workspace workspace --thread-id weekly-demo
+workpilot history --workspace workspace --thread-id weekly-demo
+```
+
+`weekly-demo` 是本次任务的标识，新报告请换一个。`run` 返回退出码 `2` 表示草稿待审，打开 `workspace/weekly-demo/drafts/report.md` 检查正文和引用，再使用同一工作目录和任务标识提交决定：
+
+```powershell
+workpilot resume --workspace workspace --thread-id weekly-demo --decision approve
+```
+
+如需修改，使用 `--decision edit --edited-file revised.md` 提交完整的 UTF-8 Markdown 文件。如需拒绝，使用 `--decision reject`，可附加 `--message` 记录原因。退出码 `0` 表示报告完成，结果位于 `workspace/weekly-demo/final/` 下的 `report.md` 和 `report.json`。退出码 `3` 表示已拒绝。
+
 ## Docker 运行
 
 [Compose](../compose.yaml)包含应用与 Caddy，使用数据卷保存工作区。先在 `.env` 设置 `WORKPILOT_DOMAIN=http://localhost`、`WORKPILOT_ADMIN_USER` 与 `WORKPILOT_ADMIN_HASH`。
