@@ -18,6 +18,14 @@
 
 上传支持 Markdown、TXT 和 CSV，单文件不超过 1 MiB，一次总计不超过 10 MiB。同批文件名不能重复，CSV 每条记录的列数需要与表头一致。
 
+忘记 `task_id` 时，可以在交互文档中运行 `GET /api/v1/tasks`，或从本机终端查询最近的任务：
+
+```powershell
+curl.exe --fail --silent --show-error "http://127.0.0.1:8000/api/v1/tasks?limit=10"
+```
+
+列表按创建时间倒序排列。`limit` 默认为 `100`，服务端将取值限制在 `1` 到 `500`。从对应任务记录中复制 `task_id`，继续查看状态或下载报告。
+
 ## 2. 查看处理过程与草稿
 
 通过 `GET /api/v1/tasks/{task_id}` 查看状态。任务经过导入、提取、校验、语义核验和写作，到达 `waiting_approval` 后开始审阅。
